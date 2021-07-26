@@ -1,19 +1,19 @@
 /*
- * ut61e.h
+ * ut61e_measure.h
  *
- *  Created on: 12.11.2009
- *      Author: steffen vogel
- *         git: https://github.com/stv0g/dmm_ut61e
+ *  Created on: 2021-07-25
+ *      Author: CableTie
+ *    Based on: https://github.com/stv0g/dmm_ut61e
  */
 
-#ifndef UT61E_H_
-#define UT61E_H_
+#ifndef UT61E_MEAS_H_
+#define UT61E_MEAS_H_
 
 
-class UT61E {
+class UT61E_MEAS {
 public:
-	UT61E();
-	virtual ~UT61E();
+	UT61E_MEAS();
+	virtual ~UT61E_MEAS();
 	bool check(char * data);
 	void parse(char * data);
 	const char* getMode();
@@ -43,4 +43,4 @@ private:
 	static const char* peaklbl[];
 };
 
-#endif /* UT61E_H_ */
+#endif /* UT61E_MEAS_H_ */

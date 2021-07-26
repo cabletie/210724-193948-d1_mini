@@ -1,51 +1,51 @@
 /*
- * UT61E.cpp
+ * ut61e_measure.cpp
  *
  *  Created on: 12.11.2009
  *      Author: steffen vogel
  *         git: https://github.com/stv0g/dmm_ut61e
  */
 
-#include "ut61e.h"
+#include "ut61e_measure.h"
 #include <exception>
 #include <cstdlib>
 
-const char* UT61E::modelbl[] = { "V", "A", "Ω", "▶︎", "Hz", "F", "H", "℧" };
-const char* UT61E::fmodelbl[] = { "Duty" , "Frequency" };
-const char* UT61E::powerlbl[] = {"AC", "DC" };
-const char* UT61E::rangelbl[] = { "Auto", "Manual" };
-const char* UT61E::loadlbl[] = { "Overload", "Normal", "Underload" };
-const char* UT61E::peaklbl[] = { "Maximum", "Minimum" };
+const char* UT61E_MEAS::modelbl[] = { "V", "A", "Ω", "▶︎", "Hz", "F", "H", "℧" };
+const char* UT61E_MEAS::fmodelbl[] = { "Duty" , "Frequency" };
+const char* UT61E_MEAS::powerlbl[] = {"AC", "DC" };
+const char* UT61E_MEAS::rangelbl[] = { "Auto", "Manual" };
+const char* UT61E_MEAS::loadlbl[] = { "Overload", "Normal", "Underload" };
+const char* UT61E_MEAS::peaklbl[] = { "Maximum", "Minimum" };
 
-UT61E::UT61E() {
+UT61E_MEAS::UT61E_MEAS() {
 	mode = M_VOLTAGE;
 }
 
-UT61E::~UT61E() {}
+UT61E_MEAS::~UT61E_MEAS() {}
 
 // Returns current DMM mode from packet
 // "V", "A", "Ω", "▶︎", "Hz", "F", "H", "℧"
-const char* UT61E::getMode() {
-	return UT61E::modelbl[mode];
+const char* UT61E_MEAS::getMode() {
+	return UT61E_MEAS::modelbl[mode];
 }
 
 // Returns current Frequency Mode from DMM packet
-const char* UT61E::getFMode() {
-	return UT61E::fmodelbl[fmode];
+const char* UT61E_MEAS::getFMode() {
+	return UT61E_MEAS::fmodelbl[fmode];
 }
 
 // Returns current power type AC/DC from DMM packet
-const char* UT61E::getPower() {
-	return UT61E::powerlbl[power];
+const char* UT61E_MEAS::getPower() {
+	return UT61E_MEAS::powerlbl[power];
 }
 
 // Returns current DMM range setting
-const char* UT61E::getRange() {
-	return UT61E::rangelbl[range];
+const char* UT61E_MEAS::getRange() {
+	return UT61E_MEAS::rangelbl[range];
 }
 
 // Checks DMM packet for integrity, returns true if OK
-bool UT61E::check(char * data) {
+bool UT61E_MEAS::check(char * data) {
 	if ((data[0] & 0x30) == 0x30 && data[12] == 0x0d && data[13] == 0x0a) {
 		return true;
 	} else {
@@ -55,7 +55,7 @@ bool UT61E::check(char * data) {
 
 // Extracts / decodes DMM packet data
 // Must be called prior to 
-void UT61E::parse(char * data) {
+void UT61E_MEAS::parse(char * data) {
 	char digits[] = { data[1], data[2], data[3], data[4], data[5] };
 	value = atof(digits);
 

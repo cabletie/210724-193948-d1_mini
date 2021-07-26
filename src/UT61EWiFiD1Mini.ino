@@ -27,7 +27,7 @@
 #include <SoftwareSerial.h>           // Must be the EspSoftwareSerial library
 //#include <ArduinoMqttClient.h>
 //#include <MqttClient.h>
-#include <ut61e.h>
+#include <ut61e_measure.h>
 
 
 /*--------------------------- Global Variables ---------------------------*/
@@ -56,7 +56,7 @@ WiFiClient esp_client;
 PubSubClient client(esp_client);
 SoftwareSerial ut61e(UT61E_RX_PIN, -1); // RX, TX
 Adafruit_NeoPixel pixels(1, STATUS_LED_PIN, NEO_GRB + NEO_KHZ800);
-UT61E dmm;
+UT61E_MEAS dmm;
 
 /*--------------------------- Program ---------------------------------------*/
 /**
@@ -165,8 +165,11 @@ void loop() {
 
           sprintf(g_json_message_buffer,"{\"currentType\":\"%s\",\"unit\":\"%s\",\"value\":%.4f,\"absValue\":\"%.4f\",\"negative\":%s}",
           dmm.getPower(), dmm.getMode(), dmm.value, abs(dmm.value), dmm.value<0?"true":"false");
+          Serial.print("Squirrel JSON: ");
+          Serial.println(g_json_message_buffer);
           // Everything we've got
-          // sprintf(g_json_message_buffer,"{\"sampleNumber\":\"%lu\",\"value\":\"%.5f\",\"valueMax\":\"%.5f\",\"valueMin\":\"%.5f\",\"valueAverage\":\"%.5f\",\"mode\":\"%s\",\"currentType\":\"%s\",\"range\":\"%s\",\"frequencyMode\":\"%s\"}", dmm.sample, dmm.value, dmm.max , dmm.min, dmm.average , dmm.getMode() , dmm.getPower(),dmm.getRange(),dmm.getFMode());
+          sprintf(g_json_message_buffer,"{\"sampleNumber\":\"%lu\",\"value\":\"%.5f\",\"valueMax\":\"%.5f\",\"valueMin\":\"%.5f\",\"valueAverage\":\"%.5f\",\"mode\":\"%s\",\"currentType\":\"%s\",\"range\":\"%s\",\"frequencyMode\":\"%s\"}", dmm.sample, dmm.value, dmm.max , dmm.min, dmm.average , dmm.getMode() , dmm.getPower(),dmm.getRange(),dmm.getFMode());
+          Serial.print("JSON: ");
           Serial.println(g_json_message_buffer);
           client.publish(g_mqtt_json_topic, g_json_message_buffer);
         }
