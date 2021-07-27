@@ -14,7 +14,7 @@
     - "NeoPixel" by Adafruit
 
 */
-#define VERSION "1.2"
+#define VERSION "1.1"
 
 /*--------------------------- Configuration ------------------------------*/
 // Configuration should be done in the included file:
@@ -140,7 +140,7 @@ void loop() {
         g_mqtt_message_buffer[g_buffer_position-2] = 0;
         g_buffer_position = 0;
         client.publish(g_mqtt_raw_topic, g_mqtt_message_buffer);
-        Serial.println(g_mqtt_message_buffer);
+        Serial.print(g_mqtt_message_buffer);
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));  // Off
         pixels.show();
         dmm.parse(g_mqtt_message_buffer);
@@ -162,18 +162,18 @@ void loop() {
 //   "absValue":"24.419",
 //   "negative":true
 // }
-
+          // JSON formatted per official UT61EWiFi spec
           sprintf(g_json_message_buffer,"{\"currentType\":\"%s\",\"unit\":\"%s\",\"value\":%.4f,\"absValue\":\"%.4f\",\"negative\":%s}",
           dmm.getPower(), dmm.getMode(), dmm.value, abs(dmm.value), dmm.value<0?"true":"false");
           Serial.print("Squirrel JSON: ");
           Serial.println(g_json_message_buffer);
-          // Official @superhousetv JSON spec.
           client.publish(g_mqtt_json_topic, g_json_message_buffer);
-
+         
           // Everything we've got
           sprintf(g_json_message_buffer,"{\"sampleNumber\":\"%lu\",\"value\":\"%.5f\",\"valueMax\":\"%.5f\",\"valueMin\":\"%.5f\",\"valueAverage\":\"%.5f\",\"mode\":\"%s\",\"currentType\":\"%s\",\"range\":\"%s\",\"frequencyMode\":\"%s\"}", dmm.sample, dmm.value, dmm.max , dmm.min, dmm.average , dmm.getMode() , dmm.getPower(),dmm.getRange(),dmm.getFMode());
           Serial.print("JSON: ");
           Serial.println(g_json_message_buffer);
+
           // Don't publish this - Aaron Knox's NR code will barf
           // client.publish(g_mqtt_json_topic, g_json_message_buffer);
         }
