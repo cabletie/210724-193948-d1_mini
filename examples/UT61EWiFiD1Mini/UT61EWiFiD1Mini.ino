@@ -15,7 +15,7 @@
 
 */
 #define VERSION "2.1"
-
+// #define DEBUG
 /*--------------------------- Configuration ------------------------------*/
 // Configuration should be done in the included file:
 #include "config.h"
@@ -37,7 +37,7 @@ uint8_t g_buffer_position    = 0;
 char g_command_topic[50];           // MQTT topic for receiving commands
 char g_mqtt_raw_topic[50];          // MQTT topic for reporting the raw data packet
 char g_mqtt_json_topic[50];         // MQTT topic for reporting the decoded reading
-char g_json_message_buffer[256];    // MQTT JSON data for reporting JSON format
+char g_json_message_buffer[512];    // MQTT JSON data for reporting JSON format
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL          500   // Wait 500ms intervals for wifi connection
@@ -57,7 +57,11 @@ PubSubClient client(esp_client);
 SoftwareSerial ut61e(UT61E_RX_PIN, -1); // RX, TX
 Adafruit_NeoPixel pixels(1, STATUS_LED_PIN, NEO_GRB + NEO_KHZ800);
 // HardwareSerial Serial;
+#ifdef DEBUG
 UT61E_DISP dmm(Serial);
+#else
+UT61E_DISP dmm;
+#endif // DEBUG
 
 /*--------------------------- Program ---------------------------------------*/
 /**
@@ -146,7 +150,7 @@ void loop() {
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));  // Off
         pixels.show();
         // if(dmm.parse(g_packet_buffer,false))
-          Serial.println(dmm.get());
+          // Serial.println(dmm.get());
         if (!dmm.hold)
         {
           // Strictly Jon's definition
@@ -173,10 +177,23 @@ void loop() {
           // Official @superhousetv JSON spec.
           client.publish(g_mqtt_json_topic, g_json_message_buffer);
 
-          // // Everything we've got
-          // sprintf(g_json_message_buffer,"{\"sampleNumber\":\"%lu\",\"value\":\"%.5f\",\"valueMax\":\"%.5f\",\"valueMin\":\"%.5f\",\"valueAverage\":\"%.5f\",\"mode\":\"%s\",\"currentType\":\"%s\",\"range\":\"%s\",\"frequencyMode\":\"%s\"}", dmm.sample, dmm.value, dmm.max , dmm.min, dmm.average , dmm.getMode() , dmm.getPower(),dmm.getRange(),dmm.getFMode());
-          // Serial.print("JSON: ");
-          // Serial.println(g_json_message_buffer);
+      //  "value:" << value <<
+      //   ",unit:" << unit << 
+      //   ",display_value:" << display_value <<
+      //   ",display_unit:" << display_unit <<
+      //   ",mode:" << mode <<
+      //   ",currentType:" << currentType <<
+      //   ",peak:" << peak <<
+      //   ",relative:" << relative <<
+      //   ",hold:" << hold <<
+      //   ",range:" << mrange <<
+      //   ",operation:" << operation <<
+      //   ",battery_low:" << battery_low;
+
+          // Everything we've got
+          sprintf(g_json_message_buffer,"{\"value\":\"%.5f\",\"unit\":\"%s\",\"display_value\":\"%.5f\",\"display_unit\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\"}", dmm.value, dmm.unit.c_str(), dmm.display_value , dmm.display_unit.c_str(), dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low);
+          Serial.print("JSON: ");
+          Serial.println(g_json_message_buffer);
           // Don't publish this - Aaron Knox's NR code will barf
           // client.publish(g_mqtt_json_topic, g_json_message_buffer);
         }

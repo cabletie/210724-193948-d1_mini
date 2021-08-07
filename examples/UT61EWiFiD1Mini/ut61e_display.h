@@ -69,8 +69,11 @@ class UT61E_DISP {
 		bool _parse(bool);
 		bit_map_t get_bits(uint8_t b, status_map_t bitmap);
 		stringstream results;
-		int power(int x, unsigned int y);
+#ifdef DEBUG
+		void dump_map(bit_map_t m);
+		void print_byte(uint8_t byte);
 		HardwareSerial *serial;
+#endif // DEBUG
 	public:
 			// ut61e class to map data packet to display value and flags
 			// extern const range_dict_map_t  RANGE_VOLTAGE;
@@ -118,7 +121,9 @@ class UT61E_DISP {
 			bool battery_low; //bool
 
 			UT61E_DISP();
+#ifdef DEBUG
 			UT61E_DISP(HardwareSerial &s);
+#endif // DEBUG
 			~UT61E_DISP() { }
 
 			bool parse(char const *, bool);

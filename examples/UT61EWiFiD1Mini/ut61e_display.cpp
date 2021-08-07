@@ -23,7 +23,9 @@ using std::vector;
 // using std::tuple;
 // using std::stringstream;
 UT61E_DISP::UT61E_DISP() {};
+#ifdef DEBUG
 UT61E_DISP::UT61E_DISP(HardwareSerial &s):serial(&s) {};
+#endif // DEBUG
 bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
 {
     // """
@@ -32,11 +34,11 @@ bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
     // bit names (or fixed bits as 0/1) via template.
     // """
 
-    // bit_map* bits = new bit_map(); // maybe
     bit_map_t bits;
     for (uint8_t i=0;i<7;i++){
         bool bit = b & 1<<i;
-        string bit_name = bitmap[6-i];
+        string bit_name = bitmap[1<<i];
+        // string bit_name = bitmap[6-i];
         // #print(bit, bit_name, i)
         if(((bit_name == "0") & !bit) or ((bit_name == "1") & bit))
             continue;
@@ -48,6 +50,10 @@ bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
                 bits[bit_name] = bit;
         }
     }
+    
+    #ifdef DEBUG
+    dump_map(bits);
+    #endif // DEBUG
     return(bits);
 };
 
@@ -234,6 +240,26 @@ status_map_t UT61E_DISP::OPTION4 =
     {0b0000010, "HOLD"}, // hold mode
     {0b0000001, "LPF"}  // low-pass-filter feature is activated.
 };
+#ifdef DEBUG
+
+void UT61E_DISP::dump_map(bit_map_t m){
+    for (auto const &pair: m) {
+        serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
+    }
+}
+
+const char *bit_rep[16] = {
+    [ 0] = "0000", [ 1] = "0001", [ 2] = "0010", [ 3] = "0011",
+    [ 4] = "0100", [ 5] = "0101", [ 6] = "0110", [ 7] = "0111",
+    [ 8] = "1000", [ 9] = "1001", [10] = "1010", [11] = "1011",
+    [12] = "1100", [13] = "1101", [14] = "1110", [15] = "1111",
+};
+
+void UT61E_DISP::print_byte(uint8_t byte)
+{
+    serial->printf("'%c': %s%s", byte, bit_rep[byte >> 4], bit_rep[byte & 0x0F]);
+}
+#endif // DEBUG
 
 // The most important function of this module:
 // Parses 12-byte-long packets from the UT61E DMM and returns
@@ -241,15 +267,36 @@ status_map_t UT61E_DISP::OPTION4 =
 bool UT61E_DISP::_parse(bool extended_format = false){
     // an unordered map of bit names and their values
     bit_map_t options;
+
+    // Print out the bit pattern first
+#ifdef DEBUG
+    serial->printf("STATUS: ");print_byte(packet.pb.d_status);serial->println();
+#endif // DEBUG
     options.merge(get_bits(packet.pb.d_status,STATUS));
+
+#ifdef DEBUG
+    serial->printf("OPTION1: ");print_byte(packet.pb.d_option1);serial->println();
+#endif // DEBUG
     options.merge(get_bits(packet.pb.d_option1,OPTION1));
+
+#ifdef DEBUG
+    serial->printf("OPTION2: ");print_byte(packet.pb.d_option2);serial->println();
+#endif // DEBUG
     options.merge(get_bits(packet.pb.d_option2,OPTION2));
+
+#ifdef DEBUG
+    serial->printf("OPTION3: ");print_byte(packet.pb.d_option3);serial->println();
+#endif // DEBUG
     options.merge(get_bits(packet.pb.d_option3,OPTION3));
+
+#ifdef DEBUG
+    serial->printf("OPTION4: ");print_byte(packet.pb.d_option4);serial->println();
+#endif // DEBUG
     options.merge(get_bits(packet.pb.d_option4,OPTION4));
     
-    for (auto const &pair: options) {
-        serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
-    }
+    // for (auto const &pair: options) {
+    //     serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
+    // }
 
     Function_Dict dial_function = DIAL_FUNCTION[packet.pb.d_function];
      
@@ -348,7 +395,9 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     if(operation != "normal"){
         display_value = 0;
         value = 0;
+#ifdef DEBUG
         serial->println(operation.c_str());
+#endif // DEBUG
         return true;
     }
 
