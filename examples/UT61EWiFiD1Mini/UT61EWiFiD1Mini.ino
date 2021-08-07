@@ -14,19 +14,19 @@
     - "NeoPixel" by Adafruit
 
 */
-#define VERSION "2.0"
+#define VERSION "2.1"
 
 /*--------------------------- Configuration ------------------------------*/
 // Configuration should be done in the included file:
 #include "config.h"
 
 /*--------------------------- Libraries ----------------------------------*/
-#include <Arduino.h>
+// #include <Arduino.h>
 #include <ESP8266WiFi.h>              // ESP8266 WiFi driver
 #include <PubSubClient.h>             // For MQTT
 #include <Adafruit_NeoPixel.h>        // For status LED
 #include <SoftwareSerial.h>           // Must be the EspSoftwareSerial library
-#include <ut61e_display.h>
+#include "ut61e_display.h"
 
 
 /*--------------------------- Global Variables ---------------------------*/
@@ -56,7 +56,8 @@ WiFiClient esp_client;
 PubSubClient client(esp_client);
 SoftwareSerial ut61e(UT61E_RX_PIN, -1); // RX, TX
 Adafruit_NeoPixel pixels(1, STATUS_LED_PIN, NEO_GRB + NEO_KHZ800);
-UT61E_DISP dmm;
+// HardwareSerial Serial;
+UT61E_DISP dmm(Serial);
 
 /*--------------------------- Program ---------------------------------------*/
 /**

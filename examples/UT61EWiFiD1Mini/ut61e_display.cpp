@@ -15,14 +15,15 @@
 // #include <tuple>
 #include <cstring>
 // #include <sstream>
-// #include <math.h>
+#include <math.h>
 
 using std::unordered_map;
 using std::vector;
 // using std::string;
 // using std::tuple;
 // using std::stringstream;
-
+UT61E_DISP::UT61E_DISP() {};
+UT61E_DISP::UT61E_DISP(HardwareSerial &s):serial(&s) {};
 bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
 {
     // """
@@ -234,17 +235,6 @@ status_map_t UT61E_DISP::OPTION4 =
     {0b0000001, "LPF"}  // low-pass-filter feature is activated.
 };
 
-// power function rather than importing math (??)
-int UT61E_DISP::power(int x, unsigned int y)
-{
-    if (y == 0)
-        return 1;
-    else if (y % 2 == 0)
-        return power(x, y / 2) * power(x, y / 2);
-    else
-        return x * power(x, y / 2) * power(x, y / 2);
-};
-
 // The most important function of this module:
 // Parses 12-byte-long packets from the UT61E DMM and returns
 // a dictionary with all information extracted from the packet.
@@ -256,6 +246,10 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     options.merge(get_bits(packet.pb.d_option2,OPTION2));
     options.merge(get_bits(packet.pb.d_option3,OPTION3));
     options.merge(get_bits(packet.pb.d_option4,OPTION4));
+    
+    for (auto const &pair: options) {
+        serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
+    }
 
     Function_Dict dial_function = DIAL_FUNCTION[packet.pb.d_function];
      
@@ -336,7 +330,7 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     d1 = LCD_DIGITS[packet.pb.d_digit1];
     d0 = LCD_DIGITS[packet.pb.d_digit0];
 
-   vector<int> digit_array = {d0,d1,d2,d3,d4};
+    vector<int> digit_array = {d0,d1,d2,d3,d4};
 
     stringstream display_string;
 
@@ -344,17 +338,18 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     display_string.str().insert(m_range.dp_digit_position,1,'.');
     display_value = 0;
     for (int i = 0; i<5;i++)
-        display_value += digit_array[i]*10*i;
+        display_value += digit_array[i]*pow(10,i);
     if(options["SIGN"])
         display_value = -display_value;
-    display_value = display_value / (10 * m_range.dp_digit_position);
+    display_value = display_value / pow(10,m_range.dp_digit_position);
     display_unit = m_range.display_unit;
     value = float(display_value) * m_range.value_multiplier;
     
     if(operation != "normal"){
         display_value = 0;
         value = 0;
-        return false;
+        serial->println(operation.c_str());
+        return true;
     }
 
     // detailed_results = {
