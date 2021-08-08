@@ -5,7 +5,7 @@
  *      Author: steffen vogel
  *         git: https://github.com/stv0g/dmm_ut61e
  */
-
+// #define DEBUG
 #include "ut61e_display.h"
 #include <exception>
 // #include <cstdlib>
@@ -22,10 +22,8 @@ using std::vector;
 // using std::string;
 // using std::tuple;
 // using std::stringstream;
-UT61E_DISP::UT61E_DISP() {};
-#ifdef DEBUG
+UT61E_DISP::UT61E_DISP() {serial = 0;};
 UT61E_DISP::UT61E_DISP(HardwareSerial &s):serial(&s) {};
-#endif // DEBUG
 bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
 {
     // """
@@ -51,9 +49,8 @@ bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
         }
     }
     
-    #ifdef DEBUG
-    dump_map(bits);
-    #endif // DEBUG
+    if (serial)
+        dump_map(bits);
     return(bits);
 };
 
@@ -240,26 +237,26 @@ status_map_t UT61E_DISP::OPTION4 =
     {0b0000010, "HOLD"}, // hold mode
     {0b0000001, "LPF"}  // low-pass-filter feature is activated.
 };
-#ifdef DEBUG
 
 void UT61E_DISP::dump_map(bit_map_t m){
-    for (auto const &pair: m) {
-        serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
+    if(serial)
+        for (auto const &pair: m) {
+            serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
     }
 }
 
 const char *bit_rep[16] = {
-    [ 0] = "0000", [ 1] = "0001", [ 2] = "0010", [ 3] = "0011",
-    [ 4] = "0100", [ 5] = "0101", [ 6] = "0110", [ 7] = "0111",
-    [ 8] = "1000", [ 9] = "1001", [10] = "1010", [11] = "1011",
+    [0] = "0000", [1] = "0001", [2] = "0010", [3] = "0011",
+    [4] = "0100", [5] = "0101", [6] = "0110", [7] = "0111",
+    [8] = "1000", [9] = "1001", [10] = "1010", [11] = "1011",
     [12] = "1100", [13] = "1101", [14] = "1110", [15] = "1111",
 };
 
 void UT61E_DISP::print_byte(uint8_t byte)
 {
-    serial->printf("'%c': %s%s", byte, bit_rep[byte >> 4], bit_rep[byte & 0x0F]);
+    if(serial)
+        serial->printf("'%c': %s%s", byte, bit_rep[byte >> 4], bit_rep[byte & 0x0F]);
 }
-#endif // DEBUG
 
 // The most important function of this module:
 // Parses 12-byte-long packets from the UT61E DMM and returns
@@ -269,31 +266,46 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     bit_map_t options;
 
     // Print out the bit pattern first
-#ifdef DEBUG
-    serial->printf("STATUS: ");print_byte(packet.pb.d_status);serial->println();
-#endif // DEBUG
-    options.merge(get_bits(packet.pb.d_status,STATUS));
+    if (serial)
+    {
+        serial->printf("STATUS: ");
+        print_byte(packet.pb.d_status);
+        serial->println();
+    }
+    options.merge(get_bits(packet.pb.d_status, STATUS));
 
-#ifdef DEBUG
-    serial->printf("OPTION1: ");print_byte(packet.pb.d_option1);serial->println();
-#endif // DEBUG
-    options.merge(get_bits(packet.pb.d_option1,OPTION1));
+    if (serial)
+    {
+        serial->printf("OPTION1: ");
+        print_byte(packet.pb.d_option1);
+        serial->println();
+    }
+    options.merge(get_bits(packet.pb.d_option1, OPTION1));
 
-#ifdef DEBUG
-    serial->printf("OPTION2: ");print_byte(packet.pb.d_option2);serial->println();
-#endif // DEBUG
-    options.merge(get_bits(packet.pb.d_option2,OPTION2));
+    if (serial)
+    {
+        serial->printf("OPTION2: ");
+        print_byte(packet.pb.d_option2);
+        serial->println();
+    }
+    options.merge(get_bits(packet.pb.d_option2, OPTION2));
 
-#ifdef DEBUG
-    serial->printf("OPTION3: ");print_byte(packet.pb.d_option3);serial->println();
-#endif // DEBUG
-    options.merge(get_bits(packet.pb.d_option3,OPTION3));
+    if (serial)
+    {
+        serial->printf("OPTION3: ");
+        print_byte(packet.pb.d_option3);
+        serial->println();
+    }
+    options.merge(get_bits(packet.pb.d_option3, OPTION3));
 
-#ifdef DEBUG
-    serial->printf("OPTION4: ");print_byte(packet.pb.d_option4);serial->println();
-#endif // DEBUG
-    options.merge(get_bits(packet.pb.d_option4,OPTION4));
-    
+    if (serial)
+    {
+        serial->printf("OPTION4: ");
+        print_byte(packet.pb.d_option4);
+        serial->println();
+    }
+    options.merge(get_bits(packet.pb.d_option4, OPTION4));
+
     // for (auto const &pair: options) {
     //     serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
     // }
@@ -351,10 +363,20 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     else
         hold = false;
    
-    if (options["MAX"])
-        peak = "max";
+    if (options["MAX"]) 
+    {
+        peak = "Pmax";
+        if(serial)
+            serial->printf("{MAX : %d}\n",options["MAX"]);
+    }
     else if (options["MIN"])
-        peak = "min";
+    {
+        peak = "Pmin";
+        if(serial)
+            serial->printf("{MIN : %d}\n",options["MIN"]);
+    }
+    else
+        peak = "";
     
     if (mode == "current" and options["VBAR"])
         ;
@@ -379,10 +401,23 @@ bool UT61E_DISP::_parse(bool extended_format = false){
 
     vector<int> digit_array = {d0,d1,d2,d3,d4};
 
-    stringstream display_string;
+    char display_string[7];
+    // stringstream display_string;
 
-    display_string << d4 << d3 << d2 << d1 << d0;
-    display_string.str().insert(m_range.dp_digit_position,1,'.');
+    // display_string << d4 << d3 << d2 << d1 << d0;
+    // display_string.str().insert(m_range.dp_digit_position,1,'.');
+    sprintf(display_string,".%1d%1d%1d%1d%1d",d4,d3,d2,d1,d0);
+    for (size_t i = 0; i < (5 - m_range.dp_digit_position); i++)
+    {
+        display_string[i]=display_string[i+1];
+        display_string[i+1]='.';
+    }
+    
+    if(serial)
+    {
+        serial->printf("{dp_position : %d}\n",m_range.dp_digit_position);
+        serial->printf("{display_string : %s\n}",display_string);
+    }
     display_value = 0;
     for (int i = 0; i<5;i++)
         display_value += digit_array[i]*pow(10,i);
@@ -395,11 +430,11 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     if(operation != "normal"){
         display_value = 0;
         value = 0;
-#ifdef DEBUG
+    if(serial)
         serial->println(operation.c_str());
-#endif // DEBUG
-        return true;
-    }
+
+    return true;
+}
 
     // detailed_results = {
     //     'packet_details' : {
