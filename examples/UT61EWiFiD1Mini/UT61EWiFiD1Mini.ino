@@ -15,7 +15,7 @@
 
 */
 #define VERSION "2.1"
-// #define DEBUG
+#define DEBUG
 /*--------------------------- Configuration ------------------------------*/
 // Configuration should be done in the included file:
 #include "config.h"
@@ -37,7 +37,7 @@ uint8_t g_buffer_position    = 0;
 char g_command_topic[50];           // MQTT topic for receiving commands
 char g_mqtt_raw_topic[50];          // MQTT topic for reporting the raw data packet
 char g_mqtt_json_topic[50];         // MQTT topic for reporting the decoded reading
-char g_json_message_buffer[512];    // MQTT JSON data for reporting JSON format
+char g_json_message_buffer[256];    // MQTT JSON data for reporting JSON format
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL          500   // Wait 500ms intervals for wifi connection
@@ -152,7 +152,7 @@ void loop() {
         // if(dmm.parse(g_packet_buffer,false))
           // Serial.println(dmm.get());
         if (!dmm.hold)
-        {
+        { 
           // Strictly Jon's definition
           // The parsed values are published as a unified JSON message containing
           // various fields. The fields are:
@@ -191,7 +191,7 @@ void loop() {
       //   ",battery_low:" << battery_low;
 
           // Everything we've got
-          sprintf(g_json_message_buffer,"{\"value\":\"%.5f\",\"unit\":\"%s\",\"display_value\":\"%.5f\",\"display_unit\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\"}", dmm.value, dmm.unit.c_str(), dmm.display_value , dmm.display_unit.c_str(), dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low);
+          sprintf(g_json_message_buffer,"{\"value\":\"%.5f\",\"unit\":\"%s\",\"display_value\":\"%.4f\",\"display_unit\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\"}", dmm.value, dmm.unit.c_str(), dmm.display_value , dmm.display_unit.c_str(), dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low);
           Serial.print("JSON: ");
           Serial.println(g_json_message_buffer);
           // Don't publish this - Aaron Knox's NR code will barf
