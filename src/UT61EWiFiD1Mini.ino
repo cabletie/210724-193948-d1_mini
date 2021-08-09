@@ -5,6 +5,8 @@
   Written by Jonathan Oxer for www.superhouse.tv
    https://github.com/superhouse/UT61EWIFI
 
+  Contributions by @cabletie https://github.com/cabletie
+
   Read from a UNI-T UT61e multimeter and publish the data to an MQTT
   broker. Intended for use with a Wemos D1 Mini. The pin numbers
   used are based on the D1 Mini board profile.
