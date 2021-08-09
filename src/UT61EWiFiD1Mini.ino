@@ -39,7 +39,7 @@ char g_mqtt_raw_topic[50];            // MQTT topic for reporting the raw data p
 char g_mqtt_hex_topic[50];            // MQTT topic for reporting the hex formatted data packet
 char g_mqtt_json_topic[50];           // MQTT topic for reporting the decoded reading
 char g_mqtt_json_extended_topic[50];  // MQTT topic for reporting the decoded reading
-char g_json_message_buffer[256];      // MQTT JSON data for reporting JSON format
+char g_json_message_buffer[512];      // MQTT JSON data for reporting JSON format
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL          500   // Wait 500ms intervals for wifi connection
@@ -220,17 +220,23 @@ void loop() {
  * hold: In hold mode "true" or "false"
  * range: Range operation "manual" or "auto"
  * operation: "Normal", "overload" or "underload"
- * battery_low: "true" or "false"
+ * battery_low: true or false
+ * sign: Negative sign on, true or false
  */
           snprintf(_value, dmm.sign?8:7, "%f", dmm.value);
           snprintf(_display_value, dmm.sign?8:7, "%f", dmm.display_value);
 
           sprintf(g_json_message_buffer,"{\"value\":%s,\"unit\":\"%s\",\"display_value\":%s,\"display_unit\":\"%s\",\"display_string\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\",\"negative\":%s}", _value, dmm.unit.c_str(), _display_value , dmm.display_unit.c_str(),dmm.display_string, dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low, dmm.sign?"true":"false");
 
+          size_t msg_length = strlen(g_json_message_buffer);
+
           Serial.print("JSON: ");
           Serial.println(g_json_message_buffer);
           // Extended @cabletie spec
-          client.publish(g_mqtt_json_extended_topic, g_json_message_buffer);
+          client.beginPublish(g_mqtt_json_extended_topic, msg_length,false);
+          client.print(g_json_message_buffer);
+          // client.publish(g_mqtt_json_extended_topic, g_json_message_buffer);
+          client.endPublish();
         }
       } else { // Data error
         pixels.setPixelColor(0, pixels.Color(255, 0, 0));  // Red
