@@ -31,13 +31,15 @@
 
 /*--------------------------- Global Variables ---------------------------*/
 // MQTT
-char g_mqtt_message_buffer[150];    // General purpose buffer for MQTT messages
-char g_packet_buffer[12];        // Buffer for single DMM packet
-uint8_t g_buffer_position    = 0;
-char g_command_topic[50];           // MQTT topic for receiving commands
-char g_mqtt_raw_topic[50];          // MQTT topic for reporting the raw data packet
-char g_mqtt_json_topic[50];         // MQTT topic for reporting the decoded reading
-char g_json_message_buffer[256];    // MQTT JSON data for reporting JSON format
+char g_raw_packet_buffer[150];      // General purpose buffer for MQTT messages
+char g_packet_buffer[12];             // Buffer for single DMM packet
+uint8_t g_buffer_position = 0;
+char g_command_topic[50];             // MQTT topic for receiving commands
+char g_mqtt_raw_topic[50];            // MQTT topic for reporting the raw data packet
+char g_mqtt_hex_topic[50];            // MQTT topic for reporting the hex formatted data packet
+char g_mqtt_json_topic[50];           // MQTT topic for reporting the decoded reading
+char g_mqtt_json_extended_topic[50];  // MQTT topic for reporting the decoded reading
+char g_json_message_buffer[256];      // MQTT JSON data for reporting JSON format
 
 // Wifi
 #define WIFI_CONNECT_INTERVAL          500   // Wait 500ms intervals for wifi connection
@@ -93,15 +95,20 @@ void setup()
 
   // Set up the topics for publishing sensor readings. By inserting the unique ID,
   // the result is of the form: "device/d9616f/PM1P0" etc
-  sprintf(g_command_topic,        "cmnd/%X/COMMAND",   g_device_id);  // For receiving commands
-  sprintf(g_mqtt_raw_topic,       "tele/%X/RAW",       g_device_id);  // Data from multimeter
-  sprintf(g_mqtt_json_topic,      "tele/%X/JSON",      g_device_id);  // Data from multimeter
+  sprintf(g_command_topic,            "cmnd/%X/COMMAND",   g_device_id);  // For receiving commands
+  sprintf(g_mqtt_raw_topic,           "tele/%X/RAW",       g_device_id);  // Data from multimeter
+  sprintf(g_mqtt_hex_topic,           "tele/%X/HEX",       g_device_id);  // Data from multimeter
+  sprintf(g_mqtt_json_topic,          "tele/%X/JSON",      g_device_id);  // Data from multimeter
+  sprintf(g_mqtt_json_extended_topic, "tele/%X_x/JSON",    g_device_id);  // Extended data from multimeter
 
   // Report the MQTT topics to the serial console
+  Serial.println("MQTT command topics:");
   Serial.println(g_command_topic);       // For receiving messages
   Serial.println("MQTT topics:");
-  Serial.println(g_mqtt_raw_topic);      // From PMS
-  Serial.println(g_mqtt_json_topic);     // From PMS
+  Serial.println(g_mqtt_raw_topic);               // From PMS
+  Serial.println(g_mqtt_hex_topic);               // From PMS
+  Serial.println(g_mqtt_json_topic);              // From PMS
+  Serial.println(g_mqtt_json_extended_topic);     // From PMS
 
   // Connect to WiFi
   if (initWifi())
@@ -135,18 +142,34 @@ void loop() {
   if (ut61e.available())
   {
     byte this_character = ut61e.read();
-    //Serial.write(this_character);
-    g_mqtt_message_buffer[g_buffer_position] = this_character;
+    g_raw_packet_buffer[g_buffer_position] = this_character;
     g_buffer_position++;
-    if((13 == g_mqtt_message_buffer[g_buffer_position-2]) && (10 == g_mqtt_message_buffer[g_buffer_position-1]) ) {
-      strncpy(g_packet_buffer,g_mqtt_message_buffer,12);
+    if((13 == g_raw_packet_buffer[g_buffer_position-2]) && (10 == g_raw_packet_buffer[g_buffer_position-1]) ) {
+      // Copy only the data for parsing
+      strncpy(g_packet_buffer,g_raw_packet_buffer,12);
+      // If we successfully parse the packet, send it to the various destinations
       if(dmm.parse(g_packet_buffer,false)) {
+        // Turn on LED to flash for each good packet we process
         pixels.setPixelColor(0, pixels.Color(0, 255, 0));  // Green
         pixels.show();
-        g_mqtt_message_buffer[g_buffer_position-2] = 0;
+
+        // Truncate the raw packet buffer to suit being printed as a string
+        g_raw_packet_buffer[g_buffer_position-2] = 0;
+
+        // Reset index for the next packet
         g_buffer_position = 0;
-        client.publish(g_mqtt_raw_topic, g_mqtt_message_buffer);
-        Serial.println(g_mqtt_message_buffer);
+
+        // Publish a raw packet to MQTT
+        client.publish(g_mqtt_raw_topic, g_raw_packet_buffer);
+
+        // Publish a HEX version of the raw packet to MQTT
+        sprintf(g_json_message_buffer,"%x",g_raw_packet_buffer);
+        client.publish(g_mqtt_hex_topic, g_json_message_buffer);
+
+        // Echo to serial port
+        Serial.println(g_raw_packet_buffer);
+
+        // Now turn off LED
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));  // Off
         pixels.show();
 
@@ -155,7 +178,6 @@ void loop() {
         // So we don't send any further JSON until this changes
         if (!dmm.hold)         
         { 
-          // Strictly Jon's definition
           // The parsed values are published as a unified JSON message containing
           // various fields. The fields are:
 
@@ -172,39 +194,43 @@ void loop() {
           //   "negative":true
           // }
 
-          sprintf(g_json_message_buffer,"{\"currentType\":\"%s\",\"unit\":\"%s\",\"value\":%.4f,\"absValue\":\"%.4f\",\"negative\":%s}",
+          // Basic measurement data
+          sprintf(g_json_message_buffer,"{\"currentType\":\"%s\",\"unit\":\"%s\",\"value\":%5f,\"absValue\":\"%5f\",\"negative\":%s}",
           dmm.currentType.c_str(), dmm.mode.c_str(), dmm.value, abs(dmm.value), dmm.value<0?"true":"false");
           Serial.print("Squirrel JSON: ");
           Serial.println(g_json_message_buffer);
           // Official @superhousetv JSON spec.
           client.publish(g_mqtt_json_topic, g_json_message_buffer);
-
-      //  "value:" << value <<
-      //   ",unit:" << unit << 
-      //   ",display_value:" << display_value <<
-      //   ",display_unit:" << display_unit <<
-      //   ",mode:" << mode <<
-      //   ",currentType:" << currentType <<
-      //   ",peak:" << peak <<
-      //   ",relative:" << relative <<
-      //   ",hold:" << hold <<
-      //   ",range:" << mrange <<
-      //   ",operation:" << operation <<
-      //   ",battery_low:" << battery_low;
-
-          // Everything we've got
-          sprintf(g_json_message_buffer,"{\"value\":\"%.5f\",\"unit\":\"%s\",\"display_value\":\"%.4f\",\"display_unit\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\"}", dmm.value, dmm.unit.c_str(), dmm.display_value , dmm.display_unit.c_str(), dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low);
+/* 
+ * value: Floating point actual value of reading. No multipliers. eg 1000 Ω not 1.000 kΩ
+ * unit: One of V,A,Ω,Hz,F,deg,% with no prefix
+ * display_value: Numerical value of the display digits. e.g 1 for when 1 kΩ or 220 for 220uF
+ * display_unit: One of V,A,Ω,Hz,F,deg,% with multiplier prefix such as M,k,m,u,n
+ * mode: Function selector mode. One of "voltage", "current", "resistance", "continuity",
+ *       "diode", "frequency", "capacitance", or  "temperature"
+ * currentType: "AC" or "DC"
+ * peak: Peak measurement mode one of "min" or "max"
+ * relative: In relative mode "true" or "false"
+ * hold: In hold mode "true" or "false"
+ * range: Range operation "manual" or "auto"
+ * operation: "Normal", "overload" or "underload"
+ * battery_low: "true" or "false"
+ */
+          // Extended display data
+          sprintf(g_json_message_buffer,"{\"value\":\"%.5f\",\"unit\":\"%s\",\"display_value\":\"%.4f\",\"display_unit\":\"%s\",\"display_string\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\"}", dmm.value, dmm.unit.c_str(), dmm.display_value , dmm.display_unit.c_str(),dmm.display_string, dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low);
           Serial.print("JSON: ");
           Serial.println(g_json_message_buffer);
-          // Don't publish this - Aaron Knox's NR code will barf
-          // client.publish(g_mqtt_json_topic, g_json_message_buffer);
+          // Extended @cabletie spec
+          client.publish(g_mqtt_json_extended_topic, g_json_message_buffer);
         }
       } else { // Data error
         pixels.setPixelColor(0, pixels.Color(255, 0, 0));  // Red
         pixels.show();
         g_buffer_position = 0;
-        client.publish(g_mqtt_raw_topic, g_mqtt_message_buffer);
+        client.publish(g_mqtt_raw_topic, g_raw_packet_buffer);
         sprintf(g_json_message_buffer,"{\"error\":\"invalid data!\"}");
+        Serial.print("JSON: ");
+        Serial.println(g_json_message_buffer);
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));  // Off
         pixels.show();
       }
@@ -237,9 +263,9 @@ void reportToMqtt()
   //    pms_data.pm10_env, pms_data.pm25_env, pms_data.pm100_env,
   //    pms_data.particles_03um, pms_data.particles_05um, pms_data.particles_10um, pms_data.particles_25um, pms_data.particles_50um, pms_data.particles_100um);
   /*
-    sprintf(g_mqtt_message_buffer,  "{\"UT61E\":{\"RANGE\":%i,\"VALUE\":%i}}",
+    sprintf(g_raw_packet_buffer,  "{\"UT61E\":{\"RANGE\":%i,\"VALUE\":%i}}",
             g_ut61e_range, g_ut61e_value);
-    client.publish(g_mqtt_json_topic, g_mqtt_message_buffer);
+    client.publish(g_mqtt_json_topic, g_raw_packet_buffer);
   */
 }
 
@@ -295,8 +321,8 @@ void reconnectMqtt() {
     if (client.connect(mqtt_client_id, mqtt_username, mqtt_password))
     {
       // Once connected, publish an announcement
-      sprintf(g_mqtt_message_buffer, "Device %s starting up", mqtt_client_id);
-      client.publish(status_topic, g_mqtt_message_buffer);
+      sprintf(g_raw_packet_buffer, "Device %s starting up", mqtt_client_id);
+      client.publish(status_topic, g_raw_packet_buffer);
       pixels.setPixelColor(0, pixels.Color(0, 50, 0));  // Dim green
       pixels.show();
       // Resubscribe

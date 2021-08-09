@@ -40,12 +40,12 @@ bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
         else
         {
             if ((bit_name == "0") or (bit_name == "1"))
+                // ToDo: set an error string to assist debugging
                 std::exception(); // The 0 or 1 bits aren't 0 or 1...
             else 
                 bits[bit_name] = bit;
         }
     }
-    
     if (serial)
         dump_map(bits);
     return(bits);
@@ -371,13 +371,13 @@ bool UT61E_DISP::_parse(bool extended_format = false){
    
     if (options["MAX"]) 
     {
-        peak = "Pmax";
+        peak = "max";
         if(serial)
             serial->printf("{MAX : %d}",options["MAX"]);
     }
     else if (options["MIN"])
     {
-        peak = "Pmin";
+        peak = "min";
         if(serial)
             serial->printf("{MIN : %d}",options["MIN"]);
     }
@@ -407,14 +407,12 @@ bool UT61E_DISP::_parse(bool extended_format = false){
 
     vector<int> digit_array = {d0,d1,d2,d3,d4};
 
-    char display_string[7];
+    // char display_string[7];
     // stringstream display_string;
 
-    // display_string << d4 << d3 << d2 << d1 << d0;
-    // display_string.str().insert(m_range.dp_digit_position,1,'.');
     sprintf(display_string,".%1d%1d%1d%1d%1d",d4,d3,d2,d1,d0);
     for (size_t i = 0; i < (5 - m_range.dp_digit_position); i++)
-    {
+        {
         display_string[i]=display_string[i+1];
         display_string[i+1]='.';
     }

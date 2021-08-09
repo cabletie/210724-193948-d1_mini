@@ -109,6 +109,7 @@ class UT61E_DISP {
 			string unit; //string
 			float display_value; //float
 			string display_unit; // string
+			char display_string[10]; // char *
 			string mode; // string
 			string currentType; //string
 			string peak; //string
