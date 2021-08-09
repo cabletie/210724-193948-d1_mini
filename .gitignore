@@ -4,3 +4,6 @@
 .vscode/launch.json
 .vscode/ipch
 examples/UT61EWiFiD1Mini/.Arduino/*
+examples/UT61EWiFiD1Mini/config.h
+.gitignore
+include/config.h
