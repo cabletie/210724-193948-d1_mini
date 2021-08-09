@@ -118,6 +118,7 @@ class UT61E_DISP {
 			string mrange; //string
 			string operation; //string
 			bool battery_low; //bool
+			bool sign; //Negative sign
 
 			UT61E_DISP();
 			UT61E_DISP(HardwareSerial &s);

@@ -426,7 +426,12 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     for (int i = 0; i<5;i++)
         display_value += digit_array[i]*pow(10,i);
     if(options["SIGN"])
+    {
         display_value = -display_value;
+        sign = true;
+    } else {
+        sign = false;
+    }
     display_value = display_value / pow(10,m_range.dp_digit_position);
     display_unit = m_range.display_unit;
     value = float(display_value) * m_range.value_multiplier;

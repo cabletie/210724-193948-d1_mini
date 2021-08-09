@@ -195,8 +195,14 @@ void loop() {
           // }
 
           // Basic measurement data
-          sprintf(g_json_message_buffer,"{\"currentType\":\"%s\",\"unit\":\"%s\",\"value\":%5f,\"absValue\":\"%5f\",\"negative\":%s}",
-          dmm.currentType.c_str(), dmm.mode.c_str(), dmm.value, abs(dmm.value), dmm.value<0?"true":"false");
+          char _value[16];
+          char _display_value[16];
+
+          snprintf(_value, dmm.sign?8:7, "%f", dmm.value);
+          snprintf(_display_value, 7, "%f", abs(dmm.display_value));
+
+          sprintf(g_json_message_buffer,"{\"currentType\":\"%s\",\"unit\":\"%s\",\"value\":%s,\"absValue\":%s,\"negative\":%s}",
+          dmm.currentType.c_str(), dmm.mode.c_str(), _value, _display_value, dmm.sign?"true":"false");
           Serial.print("Squirrel JSON: ");
           Serial.println(g_json_message_buffer);
           // Official @superhousetv JSON spec.
@@ -216,8 +222,11 @@ void loop() {
  * operation: "Normal", "overload" or "underload"
  * battery_low: "true" or "false"
  */
-          // Extended display data
-          sprintf(g_json_message_buffer,"{\"value\":\"%.5f\",\"unit\":\"%s\",\"display_value\":\"%.4f\",\"display_unit\":\"%s\",\"display_string\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\"}", dmm.value, dmm.unit.c_str(), dmm.display_value , dmm.display_unit.c_str(),dmm.display_string, dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low);
+          snprintf(_value, dmm.sign?8:7, "%f", dmm.value);
+          snprintf(_display_value, dmm.sign?8:7, "%f", dmm.display_value);
+
+          sprintf(g_json_message_buffer,"{\"value\":%s,\"unit\":\"%s\",\"display_value\":%s,\"display_unit\":\"%s\",\"display_string\":\"%s\",\"mode\":\"%s\",\"currentType\":\"%s\",\"peak\":\"%s\",\"relative\":\"%i\",\"hold\":\"%i\",\"range\":\"%s\",\"operation\":\"%s\",\"battery_low\":\"%i\",\"negative\":%s}", _value, dmm.unit.c_str(), _display_value , dmm.display_unit.c_str(),dmm.display_string, dmm.mode.c_str() , dmm.currentType.c_str() , dmm.peak.c_str(),dmm.relative,dmm.hold,dmm.mrange.c_str(),dmm.operation.c_str(),dmm.battery_low, dmm.sign?"true":"false");
+
           Serial.print("JSON: ");
           Serial.println(g_json_message_buffer);
           // Extended @cabletie spec
