@@ -149,9 +149,11 @@ void loop() {
         Serial.println(g_mqtt_message_buffer);
         pixels.setPixelColor(0, pixels.Color(0, 0, 0));  // Off
         pixels.show();
-        // if(dmm.parse(g_packet_buffer,false))
-          // Serial.println(dmm.get());
-        if (!dmm.hold)
+
+        // When in 'HOLD' mode, the DMM continues to transmit 
+        // what it's reading and not what is on the display
+        // So we don't send any further JSON until this changes
+        if (!dmm.hold)         
         { 
           // Strictly Jon's definition
           // The parsed values are published as a unified JSON message containing

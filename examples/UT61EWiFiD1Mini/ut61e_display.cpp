@@ -1,29 +1,26 @@
 /*
  * ut61e_display.cpp
  *
- *  Created on: 12.11.2009
- *      Author: steffen vogel
- *         git: https://github.com/stv0g/dmm_ut61e
+ *  Created on: 2021-07-25
+ *      Author: CableTie
+ *    Based on: https://github.com/stv0g/dmm_ut61e
+ * 
  */
-// #define DEBUG
+
 #include "ut61e_display.h"
 #include <exception>
-// #include <cstdlib>
-// #include <unordered_map>
 #include <vector>
-// #include <string>
-// #include <tuple>
 #include <cstring>
-// #include <sstream>
 #include <math.h>
 
 using std::unordered_map;
 using std::vector;
-// using std::string;
-// using std::tuple;
-// using std::stringstream;
+
+// Constructors
 UT61E_DISP::UT61E_DISP() {serial = 0;};
 UT61E_DISP::UT61E_DISP(HardwareSerial &s):serial(&s) {};
+
+// Private Utility methods
 bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
 {
     // """
@@ -54,15 +51,19 @@ bit_map_t UT61E_DISP::get_bits(uint8_t b, status_map_t bitmap)
     return(bits);
 };
 
+// Wrapper to take chars as packet
 bool UT61E_DISP::parse(char const c[12], bool e){
     strncpy(packet.char_packet,c,12);
     return _parse(e);
 };
 
+// Wrapper to take chars as packet
 bool UT61E_DISP::parse(uint8_t const u[12], bool e){
     memcpy(packet.raw_packet,u,12);
     return _parse(e);
 };
+
+// All the status and info bits
 // ut61e class to map data packet to display value and flags
 range_dict_map_t UT61E_DISP::RANGE_VOLTAGE = {
     {0b0110000, {1e0, 4, "V"}},  //2.2000V
@@ -185,8 +186,7 @@ unordered_map<uint8_t, int> UT61E_DISP::LCD_DIGITS = {
     {0b0111001, 9}
 };
 
-// typedef unordered_map<uint8_t, string> status_map_t;
-
+// Status bits
 status_map_t UT61E_DISP::STATUS = 
 {
     {0b1000000, "0"},
@@ -197,16 +197,20 @@ status_map_t UT61E_DISP::STATUS =
     {0b0000010, "BATT"}, // 1-battery low
     {0b0000001, "OL"}   // input overflow
 };
+
+// Option bits byte 1
 status_map_t UT61E_DISP::OPTION1 =
 {
     {0b1000000, "0"}, // 0
     {0b0100000, "1"}, // 1
     {0b0010000, "1"}, // 1
-    {0b0001000, "JUDGE"},// 1-°C, 0-°F.
-    {0b0000100, "SIGN"}, // 1-minus sign, 0-no sign
-    {0b0000010, "BATT"}, // 1-battery low
-    {0b0000001, "OL"}   // input overflow
+    {0b0001000, "MAX"},// maximum
+    {0b0000100, "MIN"}, // minimum
+    {0b0000010, "REL"}, // relative/zero mode
+    {0b0000001, "RMR"}   // current value
 };
+
+// Option bits byte 2
 status_map_t UT61E_DISP::OPTION2 = {
     {0b1000000, "0"},   // 0
     {0b0100000, "1"},   // 1
@@ -217,6 +221,7 @@ status_map_t UT61E_DISP::OPTION2 = {
     {0b0000001, "0"}   // 0
 };
 
+// Option bits byte 3
 status_map_t UT61E_DISP::OPTION3 = 
 {
     {0b1000000, "0"},   // 0
@@ -227,6 +232,8 @@ status_map_t UT61E_DISP::OPTION3 =
     {0b0000010, "AUTO"}, // 1-automatic mode, 0-manual
     {0b0000001, "VAHZ"}
 };
+
+// Option bits byte 4
 status_map_t UT61E_DISP::OPTION4 = 
 {
     {0b1000000, "0"},   // 0
@@ -238,13 +245,15 @@ status_map_t UT61E_DISP::OPTION4 =
     {0b0000001, "LPF"}  // low-pass-filter feature is activated.
 };
 
+// Utility to dump the contents of a map (only if we have serial)
 void UT61E_DISP::dump_map(bit_map_t m){
     if(serial)
         for (auto const &pair: m) {
-            serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
+            serial->printf("{%s: %i}",pair.first.c_str(), pair.second);
     }
 }
 
+// Quick lookup to display bits in a byte
 const char *bit_rep[16] = {
     [0] = "0000", [1] = "0001", [2] = "0010", [3] = "0011",
     [4] = "0100", [5] = "0101", [6] = "0110", [7] = "0111",
@@ -252,6 +261,7 @@ const char *bit_rep[16] = {
     [12] = "1100", [13] = "1101", [14] = "1110", [15] = "1111",
 };
 
+// Print the bits of a byte (only if we have a serial device)
 void UT61E_DISP::print_byte(uint8_t byte)
 {
     if(serial)
@@ -305,10 +315,6 @@ bool UT61E_DISP::_parse(bool extended_format = false){
         serial->println();
     }
     options.merge(get_bits(packet.pb.d_option4, OPTION4));
-
-    // for (auto const &pair: options) {
-    //     serial->printf("{%s: %i}\n",pair.first.c_str(), pair.second);
-    // }
 
     Function_Dict dial_function = DIAL_FUNCTION[packet.pb.d_function];
      
@@ -367,13 +373,13 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     {
         peak = "Pmax";
         if(serial)
-            serial->printf("{MAX : %d}\n",options["MAX"]);
+            serial->printf("{MAX : %d}",options["MAX"]);
     }
     else if (options["MIN"])
     {
         peak = "Pmin";
         if(serial)
-            serial->printf("{MIN : %d}\n",options["MIN"]);
+            serial->printf("{MIN : %d}",options["MIN"]);
     }
     else
         peak = "";
@@ -415,8 +421,8 @@ bool UT61E_DISP::_parse(bool extended_format = false){
     
     if(serial)
     {
-        serial->printf("{dp_position : %d}\n",m_range.dp_digit_position);
-        serial->printf("{display_string : %s\n}",display_string);
+        serial->printf("{dp_position : %d}",m_range.dp_digit_position);
+        serial->printf("{display_string : %s}",display_string);
     }
     display_value = 0;
     for (int i = 0; i<5;i++)
